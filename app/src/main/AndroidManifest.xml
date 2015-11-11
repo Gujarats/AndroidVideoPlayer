@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest package="gujarat.videoplayaer"
+    xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+    <uses-sdk android:minSdkVersion="16" android:targetSdkVersion="22"/>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/application_name"
+        android:largeHeap="true">
+
+        <activity android:name=".SampleChooserActivity"
+                  android:configChanges="keyboardHidden"
+                  android:label="@string/application_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".PlayerActivity"
+                  android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+                  android:label="@string/application_name"
+                  android:launchMode="singleInstance"
+                  android:theme="@style/PlayerTheme">
+            <intent-filter>
+                <action android:name="com.google.android.exoplayer.demo.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="http"/>
+                <data android:scheme="https"/>
+                <data android:scheme="content"/>
+                <data android:scheme="asset"/>
+                <data android:scheme="file"/>
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
