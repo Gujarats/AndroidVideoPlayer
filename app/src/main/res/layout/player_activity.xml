@@ -21,12 +21,14 @@
     android:focusable="true"
     android:keepScreenOn="true">
 
-  <com.google.android.exoplayer.AspectRatioFrameLayout android:id="@+id/video_frame"
+  <com.google.android.exoplayer.AspectRatioFrameLayout
+      android:id="@+id/video_frame"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
       android:layout_gravity="center">
 
-    <SurfaceView android:id="@+id/surface_view"
+    <SurfaceView
+        android:id="@+id/surface_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"/>
@@ -36,7 +38,8 @@
         android:layout_height="match_parent"
         android:background="@android:color/black"/>
 
-    <com.google.android.exoplayer.text.SubtitleLayout android:id="@+id/subtitles"
+    <com.google.android.exoplayer.text.SubtitleLayout
+        android:id="@+id/subtitles"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 

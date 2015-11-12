@@ -83,7 +83,7 @@ public class SampleChooserActivity extends Activity {
   }
 
   private void onSampleSelected(Samples.Sample sample) {
-    Intent mpdIntent = new Intent(this, PlayerActivity.class)
+    Intent mpdIntent = new Intent(this, TestPlayerActivity.class)
         .setData(Uri.parse(sample.uri))
         .putExtra(PlayerActivity.CONTENT_ID_EXTRA, sample.contentId)
         .putExtra(PlayerActivity.CONTENT_TYPE_EXTRA, sample.type);

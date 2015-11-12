@@ -75,8 +75,8 @@ import gujarat.videoplayaer.player.SmoothStreamingRendererBuilder;
  * An activity that plays media using {@link DemoPlayer}.
  */
 public class PlayerActivity extends Activity implements SurfaceHolder.Callback, OnClickListener,
-    DemoPlayer.Listener, DemoPlayer.CaptionListener, DemoPlayer.Id3MetadataListener,
-    AudioCapabilitiesReceiver.Listener {
+        DemoPlayer.Listener, DemoPlayer.CaptionListener, DemoPlayer.Id3MetadataListener,
+        AudioCapabilitiesReceiver.Listener {
 
   // For use within demo app code.
   public static final String CONTENT_ID_EXTRA = "content_id";
@@ -131,6 +131,82 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
 
   // Activity lifecycle
 
+  private static String buildTrackName(MediaFormat format) {
+    if (format.adaptive) {
+      return "auto";
+    }
+    String trackName;
+    if (MimeTypes.isVideo(format.mimeType)) {
+      trackName = joinWithSeparator(joinWithSeparator(buildResolutionString(format),
+              buildBitrateString(format)), buildTrackIdString(format));
+    } else if (MimeTypes.isAudio(format.mimeType)) {
+      trackName = joinWithSeparator(joinWithSeparator(joinWithSeparator(buildLanguageString(format),
+                      buildAudioPropertyString(format)), buildBitrateString(format)),
+              buildTrackIdString(format));
+    } else {
+      trackName = joinWithSeparator(joinWithSeparator(buildLanguageString(format),
+              buildBitrateString(format)), buildTrackIdString(format));
+    }
+    return trackName.length() == 0 ? "unknown" : trackName;
+  }
+
+private static String buildResolutionString(MediaFormat format) {
+    return format.width == MediaFormat.NO_VALUE || format.height == MediaFormat.NO_VALUE
+            ? "" : format.width + "x" + format.height;
+  }
+
+private static String buildAudioPropertyString(MediaFormat format) {
+    return format.channelCount == MediaFormat.NO_VALUE || format.sampleRate == MediaFormat.NO_VALUE
+            ? "" : format.channelCount + "ch, " + format.sampleRate + "Hz";
+  }
+
+private static String buildLanguageString(MediaFormat format) {
+    return TextUtils.isEmpty(format.language) || "und".equals(format.language) ? ""
+            : format.language;
+  }
+
+private static String buildBitrateString(MediaFormat format) {
+    return format.bitrate == MediaFormat.NO_VALUE ? ""
+            : String.format(Locale.US, "%.2fMbit", format.bitrate / 1000000f);
+  }
+
+  // OnClickListener methods
+
+private static String joinWithSeparator(String first, String second) {
+    return first.length() == 0 ? second : (second.length() == 0 ? first : first + ", " + second);
+  }
+
+  // AudioCapabilitiesReceiver.Listener methods
+
+private static String buildTrackIdString(MediaFormat format) {
+    return format.trackId == MediaFormat.NO_VALUE ? ""
+            : String.format(Locale.US, " (%d)", format.trackId);
+  }
+
+/**
+   * Makes a best guess to infer the type from a media {@link android.net.Uri} and an optional overriding file
+   * extension.
+   *
+   * @param uri The {@link android.net.Uri} of the media.
+   * @param fileExtension An overriding file extension.
+   * @return The inferred type.
+   */
+  private static int inferContentType(Uri uri, String fileExtension) {
+    String lastPathSegment = !TextUtils.isEmpty(fileExtension) ? "." + fileExtension
+            : uri.getLastPathSegment();
+    if (lastPathSegment == null) {
+      return TYPE_OTHER;
+    } else if (lastPathSegment.endsWith(EXT_DASH)) {
+      return TYPE_DASH;
+    } else if (lastPathSegment.endsWith(EXT_SS)) {
+      return TYPE_SS;
+    } else if (lastPathSegment.endsWith(EXT_HLS)) {
+      return TYPE_HLS;
+    } else {
+      return TYPE_OTHER;
+    }
+  }
+
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -152,7 +228,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
       @Override
       public boolean onKey(View v, int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE
-            || keyCode == KeyEvent.KEYCODE_MENU) {
+                || keyCode == KeyEvent.KEYCODE_MENU) {
           return false;
         }
         return mediaController.dispatchKeyEvent(event);
@@ -200,7 +276,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     Intent intent = getIntent();
     contentUri = intent.getData();
     contentType = intent.getIntExtra(CONTENT_TYPE_EXTRA,
-        inferContentType(contentUri, intent.getStringExtra(CONTENT_EXT_EXTRA)));
+            inferContentType(contentUri, intent.getStringExtra(CONTENT_EXT_EXTRA)));
     contentId = intent.getStringExtra(CONTENT_ID_EXTRA);
     configureSubtitleView();
     if (player == null) {
@@ -228,8 +304,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     releasePlayer();
   }
 
-  // OnClickListener methods
-
   @Override
   public void onClick(View view) {
     if (view == retryButton) {
@@ -237,9 +311,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     }
   }
 
-  // AudioCapabilitiesReceiver.Listener methods
-
-  @Override
+    @Override
   public void onAudioCapabilitiesChanged(AudioCapabilities audioCapabilities) {
     if (player == null) {
       return;
@@ -250,18 +322,15 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     preparePlayer(playWhenReady);
     player.setBackgrounded(backgrounded);
   }
-
-  // Internal methods
-
   private DemoPlayer.RendererBuilder getRendererBuilder() {
     String userAgent = Util.getUserAgent(this, "ExoPlayerDemo");
     switch (contentType) {
       case TYPE_SS:
         return new SmoothStreamingRendererBuilder(this, userAgent, contentUri.toString(),
-            new SmoothStreamingTestMediaDrmCallback());
+                new SmoothStreamingTestMediaDrmCallback());
       case TYPE_DASH:
         return new DashRendererBuilder(this, userAgent, contentUri.toString(),
-            new WidevineTestMediaDrmCallback(contentId));
+                new WidevineTestMediaDrmCallback(contentId));
       case TYPE_HLS:
         return new HlsRendererBuilder(this, userAgent, contentUri.toString());
       case TYPE_OTHER:
@@ -271,43 +340,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     }
   }
 
-
-
-
-
-  // DemoPlayer.Listener implementation
-
-
-
-
-
-
-
-  // User controls
-
-
-
-
-
-  private DemoPlayer.RendererBuilder getRendererBuilder() {
-    String userAgent = Util.getUserAgent(this, "ExoPlayerDemo");
-    switch (contentType) {
-      case TYPE_SS:
-        return new SmoothStreamingRendererBuilder(this, userAgent, contentUri.toString(),
-            new SmoothStreamingTestMediaDrmCallback());
-      case TYPE_DASH:
-        return new DashRendererBuilder(this, userAgent, contentUri.toString(),
-            new WidevineTestMediaDrmCallback(contentId));
-      case TYPE_HLS:
-        return new HlsRendererBuilder(this, userAgent, contentUri.toString());
-      case TYPE_OTHER:
-        return new ExtractorRendererBuilder(this, userAgent, contentUri);
-      default:
-        throw new IllegalStateException("Unsupported type: " + contentType);
-    }
-  }
-
-  private void preparePlayer(boolean playWhenReady) {
+    private void preparePlayer(boolean playWhenReady) {
     if (player == null) {
       player = new DemoPlayer(getRendererBuilder());
       player.addListener(this);
@@ -333,7 +366,6 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     player.setSurface(surfaceView.getHolder().getSurface());
     player.setPlayWhenReady(playWhenReady);
   }
-
   private void releasePlayer() {
     if (player != null) {
       debugViewHelper.stop();
@@ -346,7 +378,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     }
   }
 
-  @Override
+    @Override
   public void onStateChanged(boolean playWhenReady, int playbackState) {
     if (playbackState == ExoPlayer.STATE_ENDED) {
       showControls();
@@ -375,14 +407,13 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     playerStateTextView.setText(text);
     updateButtonVisibilities();
   }
-
   @Override
   public void onError(Exception e) {
     if (e instanceof UnsupportedDrmException) {
       // Special case DRM failures.
       UnsupportedDrmException unsupportedDrmException = (UnsupportedDrmException) e;
       int stringId = Util.SDK_INT < 18 ? R.string.drm_error_not_supported
-          : unsupportedDrmException.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
+              : unsupportedDrmException.reason == UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME
               ? R.string.drm_error_unsupported_scheme : R.string.drm_error_unknown;
       Toast.makeText(getApplicationContext(), stringId, Toast.LENGTH_LONG).show();
     }
@@ -391,55 +422,27 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     showControls();
   }
 
-  @Override
+    @Override
   public void onVideoSizeChanged(int width, int height, int unappliedRotationDegrees,
-      float pixelWidthAspectRatio) {
+                                 float pixelWidthAspectRatio) {
     shutterView.setVisibility(View.GONE);
     videoFrame.setAspectRatio(
-        height == 0 ? 1 : (width * pixelWidthAspectRatio) / height);
-  }  private static String buildTrackName(MediaFormat format) {
-    if (format.adaptive) {
-      return "auto";
-    }
-    String trackName;
-    if (MimeTypes.isVideo(format.mimeType)) {
-      trackName = joinWithSeparator(joinWithSeparator(buildResolutionString(format),
-          buildBitrateString(format)), buildTrackIdString(format));
-    } else if (MimeTypes.isAudio(format.mimeType)) {
-      trackName = joinWithSeparator(joinWithSeparator(joinWithSeparator(buildLanguageString(format),
-          buildAudioPropertyString(format)), buildBitrateString(format)),
-          buildTrackIdString(format));
-    } else {
-      trackName = joinWithSeparator(joinWithSeparator(buildLanguageString(format),
-          buildBitrateString(format)), buildTrackIdString(format));
-    }
-    return trackName.length() == 0 ? "unknown" : trackName;
+            height == 0 ? 1 : (width * pixelWidthAspectRatio) / height);
   }
-
-  private void updateButtonVisibilities() {
+private void updateButtonVisibilities() {
     retryButton.setVisibility(playerNeedsPrepare ? View.VISIBLE : View.GONE);
     videoButton.setVisibility(haveTracks(DemoPlayer.TYPE_VIDEO) ? View.VISIBLE : View.GONE);
     audioButton.setVisibility(haveTracks(DemoPlayer.TYPE_AUDIO) ? View.VISIBLE : View.GONE);
     textButton.setVisibility(haveTracks(DemoPlayer.TYPE_TEXT) ? View.VISIBLE : View.GONE);
-  }  private static String buildResolutionString(MediaFormat format) {
-    return format.width == MediaFormat.NO_VALUE || format.height == MediaFormat.NO_VALUE
-        ? "" : format.width + "x" + format.height;
   }
 
   private boolean haveTracks(int type) {
     return player != null && player.getTrackCount(type) > 0;
-  }  private static String buildAudioPropertyString(MediaFormat format) {
-    return format.channelCount == MediaFormat.NO_VALUE || format.sampleRate == MediaFormat.NO_VALUE
-        ? "" : format.channelCount + "ch, " + format.sampleRate + "Hz";
   }
-
-  public void showVideoPopup(View v) {
+public void showVideoPopup(View v) {
     PopupMenu popup = new PopupMenu(this, v);
     configurePopupWithTracks(popup, null, DemoPlayer.TYPE_VIDEO);
     popup.show();
-  }  private static String buildLanguageString(MediaFormat format) {
-    return TextUtils.isEmpty(format.language) || "und".equals(format.language) ? ""
-        : format.language;
   }
 
   public void showAudioPopup(View v) {
@@ -461,20 +464,14 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     };
     configurePopupWithTracks(popup, clickListener, DemoPlayer.TYPE_AUDIO);
     popup.show();
-  }  private static String buildBitrateString(MediaFormat format) {
-    return format.bitrate == MediaFormat.NO_VALUE ? ""
-        : String.format(Locale.US, "%.2fMbit", format.bitrate / 1000000f);
   }
-
-  public void showTextPopup(View v) {
+public void showTextPopup(View v) {
     PopupMenu popup = new PopupMenu(this, v);
     configurePopupWithTracks(popup, null, DemoPlayer.TYPE_TEXT);
     popup.show();
-  }  private static String joinWithSeparator(String first, String second) {
-    return first.length() == 0 ? second : (second.length() == 0 ? first : first + ", " + second);
   }
 
-  public void showVerboseLogPopup(View v) {
+public void showVerboseLogPopup(View v) {
     PopupMenu popup = new PopupMenu(this, v);
     Menu menu = popup.getMenu();
     menu.add(Menu.NONE, 0, Menu.NONE, R.string.logging_normal);
@@ -493,14 +490,11 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
       }
     });
     popup.show();
-  }  private static String buildTrackIdString(MediaFormat format) {
-    return format.trackId == MediaFormat.NO_VALUE ? ""
-        : String.format(Locale.US, " (%d)", format.trackId);
   }
 
   private void configurePopupWithTracks(PopupMenu popup,
-      final OnMenuItemClickListener customActionClickListener,
-      final int trackType) {
+                                        final OnMenuItemClickListener customActionClickListener,
+                                        final int trackType) {
     if (player == null) {
       return;
     }
@@ -512,8 +506,8 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
       @Override
       public boolean onMenuItemClick(MenuItem item) {
         return (customActionClickListener != null
-            && customActionClickListener.onMenuItemClick(item))
-            || onTrackItemClick(item, trackType);
+                && customActionClickListener.onMenuItemClick(item))
+                || onTrackItemClick(item, trackType);
       }
     });
     Menu menu = popup.getMenu();
@@ -521,7 +515,7 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     menu.add(MENU_GROUP_TRACKS, DemoPlayer.TRACK_DISABLED + ID_OFFSET, Menu.NONE, R.string.off);
     for (int i = 0; i < trackCount; i++) {
       menu.add(MENU_GROUP_TRACKS, i + ID_OFFSET, Menu.NONE,
-          buildTrackName(player.getTrackFormat(trackType, i)));
+              buildTrackName(player.getTrackFormat(trackType, i)));
     }
     menu.setGroupCheckable(MENU_GROUP_TRACKS, true, true);
     menu.findItem(player.getSelectedTrack(trackType) + ID_OFFSET).setChecked(true);
@@ -535,6 +529,8 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     return true;
   }
 
+  // DemoPlayer.CaptionListener implementation
+
   private void toggleControlsVisibility()  {
     if (mediaController.isShowing()) {
       mediaController.hide();
@@ -544,21 +540,19 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     }
   }
 
-  // DemoPlayer.CaptionListener implementation
+  // DemoPlayer.MetadataListener implementation
 
   private void showControls() {
     mediaController.show(0);
     debugRootView.setVisibility(View.VISIBLE);
   }
 
-  // DemoPlayer.MetadataListener implementation
+  // SurfaceHolder.Callback implementation
 
   @Override
   public void onCues(List<Cue> cues) {
     subtitleLayout.setCues(cues);
   }
-
-  // SurfaceHolder.Callback implementation
 
   @Override
   public void onId3Metadata(Map<String, Object> metadata) {
@@ -566,16 +560,16 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
       if (TxxxMetadata.TYPE.equals(entry.getKey())) {
         TxxxMetadata txxxMetadata = (TxxxMetadata) entry.getValue();
         Log.i(TAG, String.format("ID3 TimedMetadata %s: description=%s, value=%s",
-            TxxxMetadata.TYPE, txxxMetadata.description, txxxMetadata.value));
+                TxxxMetadata.TYPE, txxxMetadata.description, txxxMetadata.value));
       } else if (PrivMetadata.TYPE.equals(entry.getKey())) {
         PrivMetadata privMetadata = (PrivMetadata) entry.getValue();
         Log.i(TAG, String.format("ID3 TimedMetadata %s: owner=%s",
-            PrivMetadata.TYPE, privMetadata.owner));
+                PrivMetadata.TYPE, privMetadata.owner));
       } else if (GeobMetadata.TYPE.equals(entry.getKey())) {
         GeobMetadata geobMetadata = (GeobMetadata) entry.getValue();
         Log.i(TAG, String.format("ID3 TimedMetadata %s: mimeType=%s, filename=%s, description=%s",
-            GeobMetadata.TYPE, geobMetadata.mimeType, geobMetadata.filename,
-            geobMetadata.description));
+                GeobMetadata.TYPE, geobMetadata.mimeType, geobMetadata.filename,
+                geobMetadata.description));
       } else {
         Log.i(TAG, String.format("ID3 TimedMetadata %s", entry.getKey()));
       }
@@ -615,40 +609,17 @@ public class PlayerActivity extends Activity implements SurfaceHolder.Callback, 
     subtitleLayout.setFractionalTextSize(SubtitleLayout.DEFAULT_TEXT_SIZE_FRACTION * fontScale);
   }
 
-  @TargetApi(19)
+    @TargetApi(19)
   private float getUserCaptionFontScaleV19() {
     CaptioningManager captioningManager =
-        (CaptioningManager) getSystemService(Context.CAPTIONING_SERVICE);
+            (CaptioningManager) getSystemService(Context.CAPTIONING_SERVICE);
     return captioningManager.getFontScale();
   }
-
-  @TargetApi(19)
+@TargetApi(19)
   private CaptionStyleCompat getUserCaptionStyleV19() {
     CaptioningManager captioningManager =
-        (CaptioningManager) getSystemService(Context.CAPTIONING_SERVICE);
+            (CaptioningManager) getSystemService(Context.CAPTIONING_SERVICE);
     return CaptionStyleCompat.createFromCaptionStyle(captioningManager.getUserStyle());
-  }  /**
-   * Makes a best guess to infer the type from a media {@link android.net.Uri} and an optional overriding file
-   * extension.
-   *
-   * @param uri The {@link android.net.Uri} of the media.
-   * @param fileExtension An overriding file extension.
-   * @return The inferred type.
-   */
-  private static int inferContentType(Uri uri, String fileExtension) {
-    String lastPathSegment = !TextUtils.isEmpty(fileExtension) ? "." + fileExtension
-        : uri.getLastPathSegment();
-    if (lastPathSegment == null) {
-      return TYPE_OTHER;
-    } else if (lastPathSegment.endsWith(EXT_DASH)) {
-      return TYPE_DASH;
-    } else if (lastPathSegment.endsWith(EXT_SS)) {
-      return TYPE_SS;
-    } else if (lastPathSegment.endsWith(EXT_HLS)) {
-      return TYPE_HLS;
-    } else {
-      return TYPE_OTHER;
-    }
   }
 
 }
