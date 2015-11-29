@@ -1,7 +1,9 @@
 package gujarat.videoplayaer.controller;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -30,7 +32,7 @@ import gujarat.videoplayaer.player.ExtractorRendererBuilder;
 /**
  * Created by Gujarat Santana on 12/11/15.
  */
-public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.Listener, DemoPlayer.CaptionListener, DemoPlayer.Id3MetadataListener,AudioCapabilitiesReceiver.Listener {
+public class TestPlayerController implements DemoPlayer.Listener, DemoPlayer.CaptionListener, DemoPlayer.Id3MetadataListener{
 
     public static TestPlayerController instance;
     private MediaController mediaController;
@@ -39,6 +41,7 @@ public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.L
     private AspectRatioFrameLayout videoFrame;
     private SubtitleLayout subtitleLayout;
     private Uri contentUri;
+    private String urlVideo;
     private boolean playerNeedsPrepare;
     private long playerPosition;
     private boolean enableBackgroundAudio;
@@ -55,7 +58,7 @@ public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.L
         return instance;
     }
 
-    public void setEngineVideo(Context context,View root, View shutterView,SurfaceView surfaceView,AspectRatioFrameLayout videoFrame,SubtitleLayout subtitleLayout){
+    public void setEngineVideo(final Context context,View root, View shutterView,SurfaceView surfaceView,AspectRatioFrameLayout videoFrame,SubtitleLayout subtitleLayout){
         //ini variable
         this.context =context;
         this.videoFrame = videoFrame;
@@ -64,10 +67,43 @@ public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.L
         this.shutterView = shutterView;
 
         // init engine video
-        surfaceView.getHolder().addCallback(this);
+        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback(){
+
+            @Override
+            public void surfaceCreated(SurfaceHolder surfaceHolder) {
+                if (player != null) {
+                    player.setSurface(surfaceHolder.getSurface());
+                }
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+                if (player != null) {
+                    player.blockingClearSurface();
+                }
+            }
+        });
         mediaController = new MediaController(context);
         mediaController.setAnchorView(root);
-        audioCapabilitiesReceiver = new AudioCapabilitiesReceiver(context, this);
+        audioCapabilitiesReceiver = new AudioCapabilitiesReceiver(context, new AudioCapabilitiesReceiver.Listener(){
+
+            @Override
+            public void onAudioCapabilitiesChanged(AudioCapabilities audioCapabilities) {
+                if (player == null) {
+                    return;
+                }
+                boolean backgrounded = player.getBackgrounded();
+                boolean playWhenReady = player.getPlayWhenReady();
+                releasePlayer();
+                preparePlayer(context,playWhenReady);
+                player.setBackgrounded(backgrounded);
+            }
+        });
         audioCapabilitiesReceiver.register();
 
     }
@@ -79,6 +115,7 @@ public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.L
 
     public void setOnResumeVideo(Context context,String urlVideo){
         contentUri = Uri.parse(urlVideo);
+        this.urlVideo = urlVideo;
 //        contentType = intent.getIntExtra(CONTENT_TYPE_EXTRA,
 //                inferContentType(contentUri, intent.getStringExtra(CONTENT_EXT_EXTRA)));
 //        contentId = intent.getStringExtra(CONTENT_ID_EXTRA);
@@ -131,6 +168,12 @@ public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.L
         subtitleLayout.setFractionalTextSize(SubtitleLayout.DEFAULT_TEXT_SIZE_FRACTION * fontScale);
     }
 
+    public void onNewIntent(Activity activity,Intent intent){
+        releasePlayer();
+        playerPosition = 0;
+        activity.setIntent(intent);
+    }
+
     private void preparePlayer(Context context,boolean playWhenReady) {
         if (player == null) {
             player = new DemoPlayer(getRendererBuilder(context));
@@ -181,25 +224,15 @@ public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.L
     private DemoPlayer.RendererBuilder getRendererBuilder(Context context) {
         String userAgent = Util.getUserAgent(context, "ExoPlayerDemo");
         return new ExtractorRendererBuilder(context, userAgent, contentUri);
+//        return new SmoothStreamingRendererBuilder(context, userAgent, contentUri.toString(),new SmoothStreamingTestMediaDrmCallback());
 
     }
 
-    @Override
-    public void surfaceCreated(SurfaceHolder surfaceHolder) {
-        if (player != null) {
-            player.setSurface(surfaceHolder.getSurface());
-        }
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-        //Do Nothing
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-        if (player != null) {
-            player.blockingClearSurface();
+    public void toggleControlsVisibility()  {
+        if (mediaController.isShowing()) {
+            mediaController.hide();
+        } else {
+            showControls();
         }
     }
 
@@ -242,15 +275,15 @@ public class TestPlayerController implements SurfaceHolder.Callback,DemoPlayer.L
         }
 
 
-    @Override
-    public void onAudioCapabilitiesChanged(AudioCapabilities audioCapabilities) {
-        if (player == null) {
-            return;
-        }
-        boolean backgrounded = player.getBackgrounded();
-        boolean playWhenReady = player.getPlayWhenReady();
-        releasePlayer();
-        preparePlayer(context,playWhenReady);
-        player.setBackgrounded(backgrounded);
-    }
+//    @Override
+//    public void onAudioCapabilitiesChanged(AudioCapabilities audioCapabilities) {
+//        if (player == null) {
+//            return;
+//        }
+//        boolean backgrounded = player.getBackgrounded();
+//        boolean playWhenReady = player.getPlayWhenReady();
+//        releasePlayer();
+//        preparePlayer(context,playWhenReady);
+//        player.setBackgrounded(backgrounded);
+//    }
 }
