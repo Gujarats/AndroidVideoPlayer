@@ -3,4 +3,10 @@ This is sample project [From Exoplayer demo](https://google.github.io/ExoPlayer/
 
 you can download and test it to your device and emulator.
 
-I have add TestController and TestActivity for esier to read.
+You need to see these files for understanding :
+
+ - Layout : test_player.xml
+ - TestPlayerActivity
+ - TestPlayerController
+ 
+I've tested it and play video .mp4 file over HTTP.
